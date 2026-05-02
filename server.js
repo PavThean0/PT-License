@@ -11,8 +11,11 @@ const crypto  = require('crypto');
 
 const app  = express();
 app.use(express.json());
-app.set('trust proxy', true);
 
+// ✅ ADD THIS LINE BACK
+const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
+
+// ✅ then this works
 const LICENSES_FILE = path.join(DATA_DIR, 'licenses.json');
 
 // ─── LOAD / SAVE ──────────────────────────────────────────
