@@ -12,7 +12,8 @@ const crypto  = require('crypto');
 const app  = express();
 app.use(express.json());
 
-const LICENSES_FILE = path.join(__dirname, 'licenses.json');
+const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
+const LICENSES_FILE = path.join(DATA_DIR, 'licenses.json');
 
 // ─── LOAD / SAVE ──────────────────────────────────────────
 function loadLicenses() {
