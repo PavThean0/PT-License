@@ -85,7 +85,7 @@ app.post('/api/validate', (req, res) => {
 });
 
 // ─── ADMIN: list all licenses ─────────────────────────────
-const ADMIN_SECRET = process.env.ADMIN_SECRET || 'PavThean@260705@admin';
+const ADMIN_SECRET = process.env.ADMIN_SECRET || 'changeme123';
 
 app.get('/api/admin/licenses', (req, res) => {
   if (req.headers['x-admin-secret'] !== ADMIN_SECRET) return res.status(403).json({ error: 'Forbidden' });
@@ -123,6 +123,24 @@ app.post('/api/admin/set-expiry', (req, res) => {
   saveLicenses(licenses);
   console.log('Expiry set for ' + key + ': ' + (expiresAt || 'lifetime'));
   res.json({ ok: true, key, expiresAt: licenses[key].expiresAt });
+});
+
+app.post('/api/admin/gen', (req, res) => {
+  if (req.headers['x-admin-secret'] !== ADMIN_SECRET) return res.status(403).json({ error: 'Forbidden' });
+  const { owner, expiresAt } = req.body;
+  if (!owner) return res.status(400).json({ error: 'owner required' });
+  const key = 'PT-' + crypto.randomBytes(12).toString('hex').toUpperCase();
+  const licenses = loadLicenses();
+  licenses[key] = {
+    owner,
+    createdAt: new Date().toISOString(),
+    expiresAt: expiresAt || null,
+    machineId: null,
+    active: true
+  };
+  saveLicenses(licenses);
+  console.log('Key created for ' + owner + ': ' + key);
+  res.json({ ok: true, key, owner, expiresAt: expiresAt || null });
 });
 
 // ─── START ────────────────────────────────────────────────
