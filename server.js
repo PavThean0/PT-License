@@ -11,8 +11,8 @@ const crypto  = require('crypto');
 
 const app  = express();
 app.use(express.json());
+app.set('trust proxy', true);
 
-const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
 const LICENSES_FILE = path.join(DATA_DIR, 'licenses.json');
 
 // ─── LOAD / SAVE ──────────────────────────────────────────
@@ -45,7 +45,7 @@ if (process.argv[2] === '--gen') {
 
 // ─── VALIDATE ENDPOINT ────────────────────────────────────
 app.post('/api/validate', (req, res) => {
-  const { licenseKey, machineId, ip } = req.body;
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
   if (!licenseKey || !machineId) {
     return res.json({ valid: false, reason: 'Missing fields' });
@@ -85,8 +85,7 @@ app.post('/api/validate', (req, res) => {
   return res.json({ valid: true, owner: lic.owner });
 });
 
-// ─── ADMIN: list all licenses ─────────────────────────────
-const ADMIN_SECRET = process.env.ADMIN_SECRET || 'changeme123';
+
 
 app.get('/api/admin/licenses', (req, res) => {
   if (req.headers['x-admin-secret'] !== ADMIN_SECRET) return res.status(403).json({ error: 'Forbidden' });
