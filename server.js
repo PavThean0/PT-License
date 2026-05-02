@@ -14,7 +14,7 @@ app.use(express.json());
 
 // ✅ ADD THIS LINE BACK
 const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
-
+const ADMIN_SECRET = process.env.ADMIN_SECRET || 'PavThean@260705@admin';
 // ✅ then this works
 const LICENSES_FILE = path.join(DATA_DIR, 'licenses.json');
 
@@ -48,6 +48,7 @@ if (process.argv[2] === '--gen') {
 
 // ─── VALIDATE ENDPOINT ────────────────────────────────────
 app.post('/api/validate', (req, res) => {
+  const { licenseKey, machineId } = req.body; // ✅ FIX
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
   if (!licenseKey || !machineId) {
@@ -57,34 +58,28 @@ app.post('/api/validate', (req, res) => {
   const licenses = loadLicenses();
   const lic      = licenses[licenseKey];
 
-  if (!lic)          return res.json({ valid: false, reason: 'Invalid license key' });
-  if (!lic.active)   return res.json({ valid: false, reason: 'License revoked' });
+  if (!lic)        return res.json({ valid: false, reason: 'Invalid license key' });
+  if (!lic.active) return res.json({ valid: false, reason: 'License revoked' });
 
-  // Check expiry
   if (lic.expiresAt && new Date() > new Date(lic.expiresAt)) {
     return res.json({ valid: false, reason: 'License expired' });
   }
 
-  // Lock to first machine
   if (!lic.machineId) {
-    lic.machineId  = machineId;
-    lic.lockedAt   = new Date().toISOString();
-    lic.lockedIp   = ip;
+    lic.machineId = machineId;
+    lic.lockedAt  = new Date().toISOString();
+    lic.lockedIp  = ip;
     licenses[licenseKey] = lic;
     saveLicenses(licenses);
-    console.log(`🔒 Locked "${licenseKey}" → machine ${machineId} (${ip})`);
   } else if (lic.machineId !== machineId) {
-    console.warn(`⚠️  Machine mismatch for "${licenseKey}": expected ${lic.machineId}, got ${machineId} (${ip})`);
     return res.json({ valid: false, reason: 'License bound to another machine' });
   }
 
-  // Log access
-  lic.lastSeen   = new Date().toISOString();
-  lic.lastIp     = ip;
+  lic.lastSeen = new Date().toISOString();
+  lic.lastIp   = ip;
   licenses[licenseKey] = lic;
   saveLicenses(licenses);
 
-  console.log(`✅ "${licenseKey}" validated for ${lic.owner} (${ip})`);
   return res.json({ valid: true, owner: lic.owner });
 });
 
